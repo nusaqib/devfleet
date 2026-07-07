@@ -10,8 +10,28 @@ defaults:
   # Guest Additions; "rsync" needs nothing. Per-machine override below.
   synced_folder_type: rsync
 
-# Optional `box_version` pins a specific published version (see boxes/<os>/
-# metadata.json). Omit it to always use the latest available version.
+# Per-machine keys (all optional):
+#   box_version         pin a published version (see boxes/<os>/metadata.json);
+#                       omit to always use the latest.
+#   cpus / memory       override the defaults above.
+#   synced_folder_type  "virtualbox" (native vboxsf, needs Guest Additions) or
+#                       "rsync" (no GA required).
+#   gui                 true → show the VM window with extra video memory
+#                       (pair with a desktop role for a usable GUI).
+#   extra_vars          a map merged into the runtime Ansible run, so ONE machine
+#                       can opt into extra roles without affecting the others,
+#                       e.g. { devfleet_install_desktop: true }.
+#
+# Example — a GUI desktop machine reusing the Ubuntu box (uncomment + add a
+# `desktop` role gated on devfleet_install_desktop to make it do anything):
+#   - name: ubuntu-desktop
+#     box: devfleet/ubuntu-2404
+#     ssh_port: 2226
+#     memory: 4096
+#     synced_folder_type: virtualbox
+#     gui: true
+#     extra_vars:
+#       devfleet_install_desktop: true
 machines:
   - name: ubuntu
     box: devfleet/ubuntu-2404

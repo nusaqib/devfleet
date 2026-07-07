@@ -218,6 +218,31 @@ Add an entry to `vagrant/machines.yaml`:
 ```
 `vagrant up ubuntu-big`. No Ruby edits — the Vagrantfile iterates the list.
 
+### Customize ONE machine differently (per-machine profiles)
+Any single machine can diverge from the fleet via two optional `machines.yaml`
+keys — no changes to the others:
+
+- **`gui: true`** — boots the VM with a visible window + extra video memory
+  (for a desktop; pair with a desktop role for something to display).
+- **`extra_vars: {…}`** — merged into that machine's runtime Ansible run, so it
+  can opt into extra roles. Gate roles in `base.yml` on the variable:
+  ```yaml
+  # base.yml
+      - role: desktop
+        when: devfleet_install_desktop | default(false) | bool
+  ```
+  ```yaml
+  # machines.yaml — only THIS machine gets the desktop role + a window
+    - name: ubuntu-desktop
+      box: devfleet/ubuntu-2404
+      ssh_port: 2226
+      gui: true
+      extra_vars: { devfleet_install_desktop: true }
+  ```
+`vagrant up ubuntu-desktop` (runtime), or bake it into a dedicated box by setting
+the same var at build time. This is the general lever for "install X on just one
+box" — write a role, toggle it per machine.
+
 ---
 
 ## 7. Troubleshooting — the real gotchas
