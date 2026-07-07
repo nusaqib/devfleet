@@ -84,7 +84,7 @@ devfleet/
 ├── ansible/
 │   ├── ansible.cfg
 │   ├── requirements.yml       # Ansible collections (community.general)
-│   ├── playbooks/base.yml     # the ONE playbook used at build AND run time
+│   ├──  base.yml              # the ONE playbook used at build AND run time
 │   ├── roles/
 │   │   ├── base/              # minimal, always-on (users, ssh, core packages)
 │   │   │   ├── tasks/{main,Debian,RedHat}.yml   # family-aware
@@ -311,7 +311,7 @@ auto-included by `main.yml` based on `ansible_os_family`.
 
 ### Add a new dev-tooling role (e.g. `docker`, `languages`)
 1. `ansible/roles/<name>/tasks/main.yml` (+ `defaults/`, family files as needed).
-2. Add it to `ansible/playbooks/base.yml` under `roles:` (or make a new playbook).
+2. Add it to `ansible/base.yml` under `roles:` (or make a new playbook).
 
 ### Add a new OS (e.g. Fedora, AlmaLinux)
 1. Create `packer/<os>.pkrvars.hcl` (ISO URL, `sha256:` checksum, `guest_os_type`,
@@ -357,7 +357,77 @@ box" — write a role, toggle it per machine.
 
 ---
 
-## 7. Troubleshooting — the real gotchas
+## 7. EPICS ecosystem
+
+devfleet can build an [EPICS](https://epics-controls.org/) developer environment.
+The EPICS roles are **vendored** from the upstream
+[EPICS training-vm](https://github.com/epics-base) project into `ansible/roles/`
+(kept verbatim so they track upstream; excluded from ansible-lint):
+
+- **`m_base`** — builds **EPICS Base + PVXS** from source into `/opt/epics`, and
+  owns the reusable build machinery every module reuses.
+- Core modules — **`m_asyn`, `m_autosave`, `m_sscan`, `m_calc`, `m_seq`,
+  `m_stream`** (each depends on `m_base`).
+
+Everything installs under **`/opt/epics/<module>-<version>/`**, with `RELEASE.local`
+wired up automatically and a login PATH via **`/etc/profile.d/epics-tools.sh`**.
+Builds are **flag-file cached** (`/opt/epics/.flag/`) so re-provisioning is a no-op
+once built.
+
+### Spin up an EPICS VM
+
+A ready-made `epics` machine is defined in `machines.yaml` (reuses the Ubuntu box,
+8 GB RAM for compiling, all core modules enabled):
+
+```bash
+cd vagrant
+vagrant up epics --provider=libvirt      # or without the flag for VirtualBox
+# first build compiles Base + PVXS + 6 modules from source — several minutes
+```
+
+Then use it (a fresh login sources `epics-tools.sh`, putting the tools on PATH):
+
+```bash
+vagrant ssh epics
+which softIoc caget caput pvxget         # EPICS Base + PVXS tools
+ls /opt/epics                            # base-7.0.10, pvxs-1.5.1, asyn-*, ...
+```
+
+### Enable EPICS on any machine
+
+It's the standard per-machine opt-in — add the module flags to a machine's
+`extra_vars` in `machines.yaml` (modules pull `m_base` in automatically):
+
+```yaml
+  - name: my-ioc
+    box: devfleet/ubuntu-2404
+    memory: 8192
+    extra_vars:
+      m_base: true
+      m_asyn: true
+      m_stream: true
+```
+
+Notes:
+- **Memory:** source-compiling (especially PVXS) is memory-hungry — give EPICS
+  machines **≥ 6–8 GB** or the build gets OOM-killed. `-j` parallelism follows the
+  machine's `cpus`.
+- **Rebuild:** pass `-e m_rebuild_all=true` to force a from-scratch rebuild;
+  otherwise the flag-file cache skips already-built modules.
+- **OS support:** on **Ubuntu** all core modules build; `pvaPy` is the known
+  exception (excluded). **Rocky** builds everything.
+
+### Add another EPICS module
+
+1. Copy the role from the training-vm repo:
+   `cp -r ~/gitsrc/training-vm/ansible/roles/m_<x> ansible/roles/ && rm -rf ansible/roles/m_<x>/molecule`
+2. Add a gated entry in `ansible/base.yml` (respect its meta deps' order).
+3. Exclude it from lint in `ansible/.ansible-lint` (`exclude_paths`).
+4. Enable it via a machine's `extra_vars`.
+
+---
+
+## 8. Troubleshooting — the real gotchas
 
 These are things that actually bit us; documented so they don't bite again.
 
@@ -377,7 +447,7 @@ These are things that actually bit us; documented so they don't bite again.
 
 ---
 
-## 8. CI
+## 9. CI
 
 `.github/workflows/lint.yml` runs on every push/PR — three parallel jobs:
 `packer validate` (per OS), `ansible-lint` + `--syntax-check`, and
@@ -386,7 +456,7 @@ so it's a fast static gate. Run the same checks locally with `make lint`.
 
 ---
 
-## 9. Where to go next
+## 10. Where to go next
 
 See [roadmap.md](roadmap.md). Phase 3 is about turning proven base boxes into
 genuinely useful dev environments: baking in Guest Additions, adding real

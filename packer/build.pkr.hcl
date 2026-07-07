@@ -21,7 +21,7 @@ build {
   //    speak the SFTP protocol that modern (OpenSSH 9+) scp uses by default, so
   //    file-copying modules (copy/template) fail without forcing legacy SCP.
   provisioner "ansible" {
-    playbook_file = "${path.root}/../ansible/playbooks/base.yml"
+    playbook_file = "${path.root}/../ansible/base.yml"
     user          = var.ssh_username
     extra_arguments = [
       "--extra-vars", "devfleet_context=image",

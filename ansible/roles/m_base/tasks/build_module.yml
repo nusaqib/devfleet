@@ -1,0 +1,148 @@
+---
+- name: "{{ module.name }} | Install required DEB dependencies"
+  ansible.builtin.apt:
+    name: "{{ module.required_debs }}"
+    install_recommends: false
+    state: present
+    update_cache: true
+  become: true
+  when: ansible_facts['os_family'] == 'Debian' and module.required_debs is defined
+
+- name: "{{ module.name }} | Install required RPM dependencies"
+  dnf:
+    name: "{{ module.required_rpms }}"
+    enablerepo: "{{ module.enable_repos | default('[]') }}"
+    install_weak_deps: false
+    state: present
+  become: true
+  when: ansible_facts['os_family'] == 'RedHat' and module.required_rpms is defined
+
+- name: "{{ module.name }} | Check target directory"
+  ansible.builtin.stat:
+    path: "{{ epics_install_path }}/{{ module.id }}-{{ module.version }}"
+  register: target_dir
+
+- name: "{{ module.name }} | Clear module built flag"
+  ansible.builtin.file:
+    path: "{{ epics_install_path }}/.flag/{{ module.id }}-{{ module.version }}"
+    state: absent
+  become: true
+  when: (m_rebuild_all | default(false)) or target_dir.stat.exists == false
+
+- name: "{{ module.name }} | Check module built flag"
+  ansible.builtin.stat:
+    path: "{{ epics_install_path }}/.flag/{{ module.id }}-{{ module.version }}"
+  register: module_built_flag
+
+- name: "{{ module.name }} | Rebuild from sources"
+  when: module_built_flag.stat.exists == false
+  block:
+    - name: Mark all following modules as needs_rebuild
+      ansible.builtin.set_fact:
+        m_rebuild_all: true
+
+    - name: "{{ module.name }} rebuild | Download source tar"
+      get_url:
+        url: "{{ module.url }}"
+        dest: "/tmp/{{ module.id }}-{{ module.version }}.tar.gz"
+      register: download_result
+      until: download_result is succeeded
+      retries: 5
+      delay: 2
+
+    - name: "{{ module.name }} rebuild | Extract source tar"
+      unarchive:
+        src: "/tmp/{{ module.id }}-{{ module.version }}.tar.gz"
+        dest: "{{ epics_install_path }}"
+        exclude: "{{ module.exclude | default('[]') }}"
+        owner: root
+        group: root
+        remote_src: true
+        extra_opts:
+          - --transform
+          - "s|^[^/]*|{{ module.id }}-{{ module.version }}|" # normalize source path
+      become: true
+
+    - name: "{{ module.name }} rebuild | Remove SUPPORT definition from configure/RELEASE"
+      ansible.builtin.lineinfile:
+        path: "{{ epics_install_path }}/{{ module.id }}-{{ module.version }}/configure/RELEASE"
+        state: absent
+        regexp: "^SUPPORT="
+      become: true
+
+    - name: "{{ module.name }} rebuild | Link RELEASE.local"
+      ansible.builtin.file:
+        src: "{{ epics_install_path }}/RELEASE.local"
+        dest: "{{ epics_install_path }}/{{ module.id }}-{{ module.version }}/configure/RELEASE.local"
+        state: link
+      become: true
+      when: module.id != 'base'
+
+    - name: "{{ module.name }} rebuild | Run pre-build hook"
+      include_tasks: "{{ module.pre_hook }}"
+      when: module.pre_hook is defined
+
+    - name: "{{ module.name }} rebuild | Compile from sources (this may take a while)"
+      command: make {{ module.args | default('') }} -C {{ epics_install_path }}/{{ module.id }}-{{ module.version }} all
+      register: build_result
+      become: true
+      # the -j cpus occasionally fails !!
+      retries: 4
+      until: build_result.rc == 0
+
+    - name: "{{ module.name }} rebuild | Clean intermediate build files"
+      command: make -C {{ epics_install_path }}/{{ module.id }}-{{ module.version }} clean
+      become: true
+
+    - name: "{{ module.name }} rebuild | Run post-build hook"
+      include_tasks: "{{ module.post_hook }}"
+      when: module.post_hook is defined
+
+    - name: "{{ module.name }} rebuild | Show build result"
+      debug:
+        msg: "Building {{ module.name }} {{ 'was successful' if build_result.rc == 0 else 'failed' }}"
+
+    - name: "{{ module.name }} rebuild | Create module build flag"
+      copy:
+        content: ""
+        dest: "{{ epics_install_path }}/.flag/{{ module.id }}-{{ module.version }}"
+      become: true
+      when: build_result.rc == 0
+
+- name: "{{ module.name }} | Create RELEASE.local fragment"
+  copy:
+    content: "{{ module.release_var }}={{ epics_install_path }}/{{ module.id }}-{{ module.version }}\n"
+    dest: "{{ epics_install_path }}/RELEASE.local.d/{{ module.release_sortkey }}-{{ module.id }}"
+  become: true
+  when: module_built_flag.stat.exists == true or build_result.rc | default(0) == 0
+
+- name: "{{ module.name }} | Update (re-assemble) RELEASE.local"
+  assemble:
+    src: "{{ epics_install_path }}/RELEASE.local.d"
+    dest: "{{ epics_install_path }}/RELEASE.local"
+  become: true
+
+- name: "{{ module.name }} | Create epics-tools.sh fragment"
+  copy:
+    content: "PATH={{ epics_install_path }}/{{ module.id }}-{{ module.version }}/bin/linux-{{ ansible_facts['architecture'] }}:$PATH\n"
+    dest: "{{ epics_install_path }}/epics-tools.sh.d/{{ module.release_sortkey }}-{{ module.id }}"
+  become: true
+  when: module.add_to_path is defined
+
+- name: "{{ module.name }} | Update (re-assemble) epics-tools.sh"
+  assemble:
+    src: "{{ epics_install_path }}/epics-tools.sh.d"
+    dest: "/etc/profile.d/epics-tools.sh"
+  become: true
+
+- name: "{{ module.name }} | Determine .bob files to copy"
+  ansible.builtin.find:
+    path: "{{ epics_install_path }}/{{ module.id }}-{{ module.version }}"
+    patterns: "*.bob"
+  register: bob_files
+
+- name: "{{ module.name }} | Copy .bob files to {{ opi_install_path }}"
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: "{{ opi_install_path }}"
+  loop: "{{ bob_files.files }}"

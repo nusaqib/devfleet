@@ -15,7 +15,7 @@ echo ">> ansible collections"
 ansible-galaxy collection install -r "$ROOT/ansible/requirements.yml"
 
 echo ">> ansible syntax + lint"
-( cd "$ROOT/ansible" && ansible-playbook playbooks/base.yml --syntax-check )
+( cd "$ROOT/ansible" && ansible-playbook base.yml --syntax-check )
 if command -v ansible-lint >/dev/null 2>&1; then
   ( cd "$ROOT/ansible" && ansible-lint )
 else

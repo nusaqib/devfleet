@@ -24,4 +24,4 @@
 
 - name: Report provisioning context
   ansible.builtin.debug:
-    msg: "Provisioned {{ ansible_distribution }} {{ ansible_distribution_version }} in '{{ devfleet_context }}' context."
+    msg: "Provisioned {{ ansible_distribution }} {{ ansible_distribution_version }} in '{{ devfleet_context | default('runtime') }}' context."

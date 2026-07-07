@@ -11,3 +11,13 @@ warn_list:
 
 exclude_paths:
   - inventory/
+  # Vendored EPICS roles from the upstream training-vm project — kept verbatim so
+  # they track upstream; not linted to devfleet's standards (they use short module
+  # names / templated task names). Our own roles (base, devtools) are still linted.
+  - roles/m_base/
+  - roles/m_asyn/
+  - roles/m_autosave/
+  - roles/m_sscan/
+  - roles/m_calc/
+  - roles/m_seq/
+  - roles/m_stream/

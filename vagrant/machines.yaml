@@ -47,3 +47,21 @@ machines:
     memory: 3072
     # GA doesn't compile on Rocky 9.8 (VBox 7.1 GA vs kernel) → stay on rsync.
     synced_folder_type: rsync
+
+  # An EPICS developer VM: reuses the Ubuntu box + builds EPICS Base and the core
+  # support modules from source into /opt/epics (flag-file cached). Extra CPU/RAM
+  # for compiling. Enable/disable modules by editing extra_vars.
+  - name: epics
+    box: devfleet/ubuntu-2404
+    ssh_port: 2225
+    memory: 8192          # EPICS source compiles (esp. PVXS) are memory-hungry
+    cpus: 4
+    synced_folder_type: virtualbox   # forced to rsync automatically on libvirt
+    extra_vars:
+      m_base: true
+      m_asyn: true
+      m_autosave: true
+      m_sscan: true
+      m_calc: true
+      m_seq: true
+      m_stream: true

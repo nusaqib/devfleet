@@ -51,7 +51,7 @@ jobs:
         run: ansible-galaxy collection install -r ansible/requirements.yml
       - name: syntax check
         working-directory: ansible
-        run: ansible-playbook playbooks/base.yml --syntax-check
+        run: ansible-playbook base.yml --syntax-check
       - name: ansible-lint
         working-directory: ansible
         run: ansible-lint

@@ -1,0 +1,44 @@
+---
+# The one playbook run at BOTH image-build time (Packer) and run time (Vagrant).
+# `devfleet_context` is "image" during Packer builds, "runtime" from Vagrant —
+# use it in roles to skip/branch on build-only vs boot-time steps.
+- name: Base provisioning for all devfleet machines
+  hosts: all
+  become: true
+  # proxy_env is applied to every task's environment (empty = no proxy). Override
+  # per-machine via machines.yaml extra_vars if you're behind a corporate proxy.
+  environment: "{{ proxy_env | default({}) }}"
+  vars:
+    # NOTE: don't declare `devfleet_context` here as "{{ devfleet_context |
+    # default('runtime') }}" — that self-reference is a recursion error on newer
+    # Ansible. Packer/Vagrant pass it as an extra-var; use sites default it.
+    # Facts the vendored EPICS roles expect (from the upstream training-vm repo).
+    is_debian: "{{ ansible_facts['os_family'] == 'Debian' }}"
+    is_redhat: "{{ ansible_facts['os_family'] == 'RedHat' }}"
+  roles:
+    - base
+    # Dev tooling — set devfleet_install_devtools=false for a minimal box.
+    - role: devtools
+      when: devfleet_install_devtools | default(true) | bool
+
+    # --- EPICS ecosystem (opt-in per machine via machines.yaml extra_vars) ------
+    # Roles vendored from the EPICS training-vm project. Each is off by default and
+    # enabled with its flag, e.g. extra_vars: { m_base: true, m_asyn: true }.
+    # Modules depend on m_base (meta), so enabling a module pulls Base in; the
+    # build is source-compiled once and flag-file cached under /opt/epics/.flag.
+    # Order below respects the dependency chain (sscan before calc; asyn+calc
+    # before stream).
+    - role: m_base
+      when: m_base | default(false) | bool
+    - role: m_asyn
+      when: m_asyn | default(false) | bool
+    - role: m_autosave
+      when: m_autosave | default(false) | bool
+    - role: m_sscan
+      when: m_sscan | default(false) | bool
+    - role: m_calc
+      when: m_calc | default(false) | bool
+    - role: m_seq
+      when: m_seq | default(false) | bool
+    - role: m_stream
+      when: m_stream | default(false) | bool

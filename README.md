@@ -42,7 +42,7 @@ devfleet/
 │   └── machines.yaml          # the fleet definition — add a VM by adding a line
 ├── ansible/
 │   ├── ansible.cfg
-│   ├── playbooks/base.yml     # the ONE playbook used at build AND run time
+│   ├── base.yml     # the ONE playbook used at build AND run time
 │   ├── roles/base/            # family-aware (Debian.yml / RedHat.yml)
 │   └── inventory/local.ini
 ├── scripts/                   # build.sh, lint.sh

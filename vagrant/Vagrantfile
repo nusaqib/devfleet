@@ -104,7 +104,7 @@ Vagrant.configure("2") do |config|
       run_vars = { "devfleet_context" => "runtime" }
       run_vars.merge!(m["extra_vars"]) if m["extra_vars"]
       node.vm.provision "ansible_local" do |ansible|
-        ansible.playbook          = "/vagrant_ansible/playbooks/base.yml"
+        ansible.playbook          = "/vagrant_ansible/base.yml"
         ansible.provisioning_path = "/vagrant_ansible"
         ansible.extra_vars        = run_vars
       end
