@@ -5,8 +5,8 @@ os_name       = "debian-12"
 guest_os_type = "Debian_64"
 // NOTE: Debian 12 (Bookworm) is now oldstable — 'current' points to Debian 13.
 // Pinned to the 12.11.0 archive. Bump the version + checksum to move point releases.
-iso_url       = "https://cdimage.debian.org/cdimage/archive/12.11.0/amd64/iso-cd/debian-12.11.0-amd64-netinst.iso"
-iso_checksum  = "sha256:30ca12a15cae6a1033e03ad59eb7f66a6d5a258dcf27acd115c2bd42d22640e8"
+iso_url      = "https://cdimage.debian.org/cdimage/archive/12.11.0/amd64/iso-cd/debian-12.11.0-amd64-netinst.iso"
+iso_checksum = "sha256:30ca12a15cae6a1033e03ad59eb7f66a6d5a258dcf27acd115c2bd42d22640e8"
 
 http_directory = "http/debian"
 

@@ -20,10 +20,10 @@ packer {
 
 source "virtualbox-iso" "vm" {
   vm_name          = var.os_name
-  output_directory = "output-${var.os_name}"  // per-OS so builds don't collide
+  output_directory = "output-${var.os_name}" // per-OS so builds don't collide
   guest_os_type    = var.guest_os_type
-  iso_url       = var.iso_url
-  iso_checksum  = var.iso_checksum
+  iso_url          = var.iso_url
+  iso_checksum     = var.iso_checksum
 
   cpus      = var.cpus
   memory    = var.memory
