@@ -10,17 +10,33 @@ config_path = File.join(File.dirname(__FILE__), "machines.yaml")
 cfg         = YAML.load_file(config_path)
 defaults    = cfg.fetch("defaults", {})
 
-# Which provider this run targets — used to pick a provider-appropriate
-# synced-folder mechanism (libvirt has no vboxsf). Honors either an explicit
-# `--provider=<x>` on the command line OR VAGRANT_DEFAULT_PROVIDER; defaults to
-# virtualbox. (Parsing ARGV lets `vagrant up --provider=libvirt` work without
-# also having to export the env var.)
-PROVIDER = (ARGV.join(" ")[/--provider[= ]([\w]+)/, 1]) ||
-           ENV["VAGRANT_DEFAULT_PROVIDER"] || "virtualbox"
+# Provider chosen on THIS command line (e.g. `up --provider=libvirt`), if any.
+CLI_PROVIDER = ARGV.join(" ")[/--provider[= ]([\w]+)/, 1]
+
+# The provider a machine was ALREADY created with, read from Vagrant's state dir
+# (.vagrant/machines/<name>/<provider>/). This is what makes plain `vagrant ssh`
+# / `halt` / `provision` pick the right synced-folder type for an existing VM,
+# without needing --provider or VAGRANT_DEFAULT_PROVIDER on every command.
+def created_provider(name)
+  base = File.join(File.dirname(__FILE__), ".vagrant", "machines", name.to_s)
+  return nil unless File.directory?(base)
+  # A provider dir counts only if it holds an `id` file (a real created machine);
+  # empty leftover dirs from a destroyed/other provider are ignored.
+  Dir.entries(base).find do |e|
+    !e.start_with?(".") && File.file?(File.join(base, e, "id"))
+  end
+end
+
+# Resolve the effective provider for a machine: explicit CLI flag wins, then the
+# already-created provider, then VAGRANT_DEFAULT_PROVIDER, then virtualbox.
+def resolve_provider(name)
+  CLI_PROVIDER || created_provider(name) || ENV["VAGRANT_DEFAULT_PROVIDER"] || "virtualbox"
+end
 
 Vagrant.configure("2") do |config|
   cfg.fetch("machines").each do |m|
     config.vm.define m["name"] do |node|
+      provider = resolve_provider(m["name"])
       node.vm.box      = m["box"]
       node.vm.hostname = "devfleet-#{m['name']}"
       # Pin a published box version if machines.yaml specifies one.
@@ -62,9 +78,11 @@ Vagrant.configure("2") do |config|
 
       # Synced-folder mechanism. VirtualBox can use native "virtualbox" (vboxsf,
       # needs Guest Additions) per-OS from machines.yaml. libvirt has no vboxsf,
-      # so it always uses rsync (works without any guest tooling).
+      # so it always uses rsync (works without any guest tooling). `provider` is
+      # resolved per-machine (CLI flag / created state / env / default) so this is
+      # correct for `vagrant ssh`/`halt` on an existing VM, not just `up`.
       sf_type = m.fetch("synced_folder_type", defaults.fetch("synced_folder_type", "rsync"))
-      sf_type = "rsync" if PROVIDER == "libvirt"
+      sf_type = "rsync" if provider == "libvirt"
 
       # The default /vagrant mount only works via vboxsf; enable it natively when
       # we have GA (virtualbox + type virtualbox), otherwise disable it.

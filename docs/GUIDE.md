@@ -219,25 +219,31 @@ vagrant halt ubuntu               # stop (keep disk)
 vagrant destroy -f ubuntu         # remove the VM (box stays)
 ```
 
-**libvirt/QEMU** — pass `--provider=libvirt`. Your shell must be in the
-`libvirt` group (log out/in after install, or prefix a command with `sg libvirt -c '…'`):
+**libvirt/QEMU** — pass `--provider=libvirt` on the initial `up` only. Your shell
+must be in the `libvirt` group (log out/in after install, or prefix with
+`sg libvirt -c '…'`):
 
 ```bash
 cd vagrant
-vagrant up ubuntu --provider=libvirt      # boot on libvirt (same box name)
-vagrant ssh ubuntu                        # log in (provider is remembered)
+vagrant up ubuntu --provider=libvirt   # boot on libvirt (only `up` needs the flag)
+vagrant ssh ubuntu                     # ssh/halt/provision auto-detect the provider
 vagrant halt ubuntu
 vagrant destroy -f ubuntu
 
-# Prefer libvirt for a whole session without repeating the flag:
+# Optional: default to libvirt for a whole session (skips the flag on `up` too):
 export VAGRANT_DEFAULT_PROVIDER=libvirt
 vagrant up ubuntu
 ```
 
 Notes:
-- A machine runs **one provider at a time**. To switch an existing machine from
-  VirtualBox to libvirt (or back), `vagrant destroy -f <name>` first, then bring
-  it up with the other provider.
+- Once a machine is created, the Vagrantfile **auto-detects its provider** (from
+  `.vagrant/` state), so plain `vagrant ssh`/`halt`/`provision` work without any
+  flag or env var. Only the first `vagrant up` needs `--provider=libvirt`.
+- **Every** Vagrant command opens a libvirt connection once the vagrant-libvirt
+  plugin is installed, so your shell must be in the `libvirt` group (log out/in
+  after running the installer).
+- A machine runs **one provider at a time**. To switch it between VirtualBox and
+  libvirt, `vagrant destroy -f <name>` first, then `up` with the other provider.
 - Don't run VirtualBox and libvirt VMs **simultaneously** (VT-x contention).
 - After rebuilding a libvirt box, purge vagrant-libvirt's cached pool volume or
   the old image is reused — see Troubleshooting §7.
