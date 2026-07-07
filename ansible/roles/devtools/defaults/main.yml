@@ -1,0 +1,19 @@
+---
+# Cross-distro CLI dev tooling (same package names on apt + dnf).
+devtools_common_packages:
+  - tmux
+  - jq
+  - tree
+  - wget
+  - nano
+  - python3-pip
+
+# Compiler toolchain (build-essential / @Development Tools).
+devtools_install_build_tools: true
+
+# Container runtime, using each family's NATIVE choice (no external repos):
+#   Debian/Ubuntu → docker.io   |   RHEL/Rocky → podman + podman-docker
+devtools_install_container_runtime: true
+
+# User added to the docker group (Debian family only).
+devtools_user: vagrant

@@ -1,0 +1,5 @@
+---
+# Ansible collections the base role depends on.
+collections:
+  - name: community.general
+    version: ">=8.0.0"

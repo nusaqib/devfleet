@@ -1,0 +1,17 @@
+---
+# Common CLI tooling first (names are identical across apt/dnf), then
+# family-specific toolchain + container runtime.
+- name: Install common dev tooling
+  ansible.builtin.package:
+    name: "{{ devtools_common_packages }}"
+    state: present
+
+- name: Load OS-family-specific dev tooling
+  ansible.builtin.include_tasks: "{{ ansible_os_family }}.yml"
+
+- name: Report dev tooling installed
+  ansible.builtin.debug:
+    msg: >-
+      devtools installed on {{ ansible_distribution }}
+      (build_tools={{ devtools_install_build_tools }},
+      container_runtime={{ devtools_install_container_runtime }}).

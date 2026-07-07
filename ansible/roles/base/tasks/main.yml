@@ -1,0 +1,27 @@
+---
+# Entry point. Loads family-specific vars/tasks, then does OS-agnostic config.
+- name: Load OS-family-specific package tasks
+  ansible.builtin.include_tasks: "{{ ansible_os_family }}.yml"
+
+- name: Install common tooling
+  ansible.builtin.package:
+    name: "{{ base_common_packages }}"
+    state: present
+
+- name: Set the system timezone
+  community.general.timezone:
+    name: "{{ base_timezone }}"
+  ignore_errors: true  # community.general may be absent in minimal images
+
+- name: Ensure the vagrant user owns its home
+  ansible.builtin.file:
+    path: /home/vagrant
+    owner: vagrant
+    group: vagrant
+    mode: "0755"
+    state: directory
+    recurse: false
+
+- name: Report provisioning context
+  ansible.builtin.debug:
+    msg: "Provisioned {{ ansible_distribution }} {{ ansible_distribution_version }} in '{{ devfleet_context }}' context."

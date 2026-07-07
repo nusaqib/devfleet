@@ -1,0 +1,22 @@
+---
+# Debian/Ubuntu dev toolchain + container runtime.
+- name: Install build toolchain (Debian family)
+  ansible.builtin.apt:
+    name: build-essential
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: devtools_install_build_tools | bool
+
+- name: Install Docker (Debian family, distro package)
+  ansible.builtin.apt:
+    name: docker.io
+    state: present
+  when: devtools_install_container_runtime | bool
+
+- name: Add user to the docker group
+  ansible.builtin.user:
+    name: "{{ devtools_user }}"
+    groups: docker
+    append: true
+  when: devtools_install_container_runtime | bool

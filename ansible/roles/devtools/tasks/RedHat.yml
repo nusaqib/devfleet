@@ -1,0 +1,15 @@
+---
+# RHEL/Rocky dev toolchain + container runtime (podman is the native choice).
+- name: Install build toolchain (RedHat family)
+  ansible.builtin.dnf:
+    name: "@Development Tools"
+    state: present
+  when: devtools_install_build_tools | bool
+
+- name: Install Podman + docker CLI shim (RedHat family)
+  ansible.builtin.dnf:
+    name:
+      - podman
+      - podman-docker
+    state: present
+  when: devtools_install_container_runtime | bool

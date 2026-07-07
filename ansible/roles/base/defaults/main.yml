@@ -1,0 +1,16 @@
+---
+# OS-agnostic tooling every dev box gets. Family-specific package NAMES are
+# resolved in tasks/<family>.yml; this list is the common, cross-distro set.
+base_common_packages:
+  - git
+  - curl
+  - vim
+  - htop
+  - rsync
+  - unzip
+  - ca-certificates
+
+base_timezone: "UTC"
+
+# Set to true to also install build toolchains (gcc, make, headers).
+base_install_build_tools: false

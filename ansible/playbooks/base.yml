@@ -1,0 +1,14 @@
+---
+# The one playbook run at BOTH image-build time (Packer) and run time (Vagrant).
+# `devfleet_context` is "image" during Packer builds, "runtime" from Vagrant —
+# use it in roles to skip/branch on build-only vs boot-time steps.
+- name: Base provisioning for all devfleet machines
+  hosts: all
+  become: true
+  vars:
+    devfleet_context: "{{ devfleet_context | default('runtime') }}"
+  roles:
+    - base
+    # Dev tooling — set devfleet_install_devtools=false for a minimal box.
+    - role: devtools
+      when: devfleet_install_devtools | default(true) | bool

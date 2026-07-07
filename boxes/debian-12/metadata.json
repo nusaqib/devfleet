@@ -1,0 +1,16 @@
+{
+  "name": "devfleet/debian-12",
+  "versions": [
+    {
+      "version": "2.0.0",
+      "providers": [
+        {
+          "name": "virtualbox",
+          "url": "file:///home/nusaqib/gitsrc/experiments/devfleet/boxes/debian-12/debian-12-2.0.0.box",
+          "checksum_type": "sha256",
+          "checksum": "cd36aa524e943c23804947802fe964ebcf633049956ab932e2c3bf5d600a1184"
+        }
+      ]
+    }
+  ]
+}

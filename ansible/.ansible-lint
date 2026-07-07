@@ -1,0 +1,13 @@
+# ansible-lint config for devfleet.
+# We deliberately use ignore_errors on best-effort tasks (EPEL/timezone that may
+# be absent in minimal images), so skip that rule rather than litter the code.
+skip_list:
+  - ignore-errors
+
+# The generated Vagrant/Packer inventories aren't checked in; don't warn about
+# name casing on include filenames (Debian.yml / RedHat.yml match os_family).
+warn_list:
+  - var-naming[no-role-prefix]
+
+exclude_paths:
+  - inventory/

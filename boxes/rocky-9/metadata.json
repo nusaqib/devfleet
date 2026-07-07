@@ -1,0 +1,16 @@
+{
+  "name": "devfleet/rocky-9",
+  "versions": [
+    {
+      "version": "2.0.0",
+      "providers": [
+        {
+          "name": "virtualbox",
+          "url": "file:///home/nusaqib/gitsrc/experiments/devfleet/boxes/rocky-9/rocky-9-2.0.0.box",
+          "checksum_type": "sha256",
+          "checksum": "b6b7bbd31902ce93ac85b8d1c7c00b328f1a396e062d6f6e768ef271965e0a1c"
+        }
+      ]
+    }
+  ]
+}

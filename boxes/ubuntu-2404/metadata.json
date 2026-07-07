@@ -1,0 +1,16 @@
+{
+  "name": "devfleet/ubuntu-2404",
+  "versions": [
+    {
+      "version": "2.0.0",
+      "providers": [
+        {
+          "name": "virtualbox",
+          "url": "file:///home/nusaqib/gitsrc/experiments/devfleet/boxes/ubuntu-2404/ubuntu-2404-2.0.0.box",
+          "checksum_type": "sha256",
+          "checksum": "5e6317abef70b99c89cf2bc58887e6dbe162a3b8b387e74c66a1ef1a312bd0b0"
+        }
+      ]
+    }
+  ]
+}

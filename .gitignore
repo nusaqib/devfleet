@@ -1,0 +1,20 @@
+# Packer build artifacts
+builds/
+packer_cache/
+*.box
+crash.log
+
+# Vagrant
+.vagrant/
+
+# Ansible
+*.retry
+
+# Build logs (local)
+logs/
+
+# Editor / OS cruft
+.DS_Store
+*.swp
+output-*/
+boxes/**/*.box

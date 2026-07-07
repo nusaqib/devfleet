@@ -1,0 +1,56 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+# Data-driven multi-machine Vagrantfile. The fleet is described in machines.yaml;
+# this file just realizes it. `vagrant up` boots all; `vagrant up ubuntu` boots one.
+
+require "yaml"
+
+config_path = File.join(File.dirname(__FILE__), "machines.yaml")
+cfg         = YAML.load_file(config_path)
+defaults    = cfg.fetch("defaults", {})
+
+Vagrant.configure("2") do |config|
+  cfg.fetch("machines").each do |m|
+    config.vm.define m["name"] do |node|
+      node.vm.box      = m["box"]
+      node.vm.hostname = "devfleet-#{m['name']}"
+      # Pin a published box version if machines.yaml specifies one.
+      node.vm.box_version = m["box_version"] if m["box_version"]
+
+      # Forward SSH to a stable per-machine port for hand-run Ansible/debugging.
+      node.vm.network "forwarded_port",
+        guest: 22, host: m["ssh_port"], id: "ssh", auto_correct: true
+
+      node.vm.provider "virtualbox" do |vb|
+        vb.name   = "devfleet-#{m['name']}"
+        vb.cpus   = m.fetch("cpus", defaults["cpus"])
+        vb.memory = m.fetch("memory", defaults["memory"])
+      end
+
+      # Synced-folder mechanism is per-OS (see machines.yaml): "virtualbox"
+      # (native vboxsf, needs Guest Additions) where GA builds, else "rsync".
+      sf_type = m.fetch("synced_folder_type", defaults.fetch("synced_folder_type", "rsync"))
+
+      # The default /vagrant mount only works with Guest Additions; enable it
+      # natively when we have GA, otherwise disable it (we don't require it).
+      if sf_type == "virtualbox"
+        node.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+      else
+        node.vm.synced_folder ".", "/vagrant", disabled: true
+      end
+
+      # Ship the repo's ansible/ tree into the guest so ansible_local can run
+      # the shared playbook, using whichever mechanism this OS supports.
+      node.vm.synced_folder "../ansible", "/vagrant_ansible", type: sf_type
+
+      # Run-time provisioning uses the SAME playbook Packer baked with.
+      # `ansible_local` runs inside the guest, so the host needs no Ansible.
+      node.vm.provision "ansible_local" do |ansible|
+        ansible.playbook          = "/vagrant_ansible/playbooks/base.yml"
+        ansible.provisioning_path = "/vagrant_ansible"
+        ansible.extra_vars        = { devfleet_context: "runtime" }
+      end
+    end
+  end
+end

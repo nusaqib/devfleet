@@ -1,0 +1,29 @@
+# Fleet definition. Add a machine by adding an entry here — the Vagrantfile
+# iterates over this list, so no Ruby edits are needed to scale the fleet.
+#
+# `box` is the name you registered the Packer-built box under (see scripts/build.sh),
+# or any public box for quick starts.
+defaults:
+  cpus: 2
+  memory: 2048
+  # How the ansible/ tree is shared into the guest. "virtualbox" (vboxsf) needs
+  # Guest Additions; "rsync" needs nothing. Per-machine override below.
+  synced_folder_type: rsync
+
+# Optional `box_version` pins a specific published version (see boxes/<os>/
+# metadata.json). Omit it to always use the latest available version.
+machines:
+  - name: ubuntu
+    box: devfleet/ubuntu-2404
+    ssh_port: 2222
+    synced_folder_type: virtualbox   # GA builds cleanly on Ubuntu 24.04
+  - name: debian
+    box: devfleet/debian-12
+    ssh_port: 2223
+    synced_folder_type: virtualbox   # GA builds cleanly on Debian 12
+  - name: rocky
+    box: devfleet/rocky-9
+    ssh_port: 2224
+    memory: 3072
+    # GA doesn't compile on Rocky 9.8 (VBox 7.1 GA vs kernel) → stay on rsync.
+    synced_folder_type: rsync

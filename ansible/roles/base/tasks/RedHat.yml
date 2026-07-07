@@ -1,0 +1,14 @@
+---
+# RHEL/Rocky/Alma-specific setup.
+- name: Ensure EPEL is available (for htop et al.)
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+  ignore_errors: true  # some minimal repos lack EPEL; common pkgs still resolve
+
+- name: Install build tools (RedHat family)
+  ansible.builtin.dnf:
+    name:
+      - "@Development Tools"
+    state: present
+  when: base_install_build_tools | bool

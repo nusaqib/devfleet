@@ -1,0 +1,34 @@
+#cloud-config
+autoinstall:
+  version: 1
+  # Don't stop for interactive confirmation of destructive actions.
+  interactive-sections: []
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  identity:
+    hostname: devfleet
+    username: vagrant
+    # SHA-512 hash of "vagrant" (openssl passwd -6 vagrant).
+    password: "$6$YHUOKxH9x8jAq5N4$LyWKX.OK.wRKeS5OYuHV25RKjgSRhV8WqJYL8m//ti/Tb0kPwOax1/dEGhD.NS2C8W.C1ZWrPK4dOmDD/Ne58."
+  ssh:
+    install-server: true
+    allow-pw: true
+  storage:
+    layout:
+      name: direct
+  packages:
+    - openssh-server
+    - python3
+    - sudo
+  user-data:
+    disable_root: false
+  late-commands:
+    # Passwordless sudo + install the insecure Vagrant public key.
+    - echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/vagrant
+    - chmod 440 /target/etc/sudoers.d/vagrant
+    - curtin in-target --target=/target -- mkdir -p /home/vagrant/.ssh
+    - curtin in-target --target=/target -- sh -c "curl -fsSL https://raw.githubusercontent.com/hashicorp/vagrant/main/keys/vagrant.pub -o /home/vagrant/.ssh/authorized_keys"
+    - curtin in-target --target=/target -- chown -R vagrant:vagrant /home/vagrant/.ssh
+    - curtin in-target --target=/target -- chmod 700 /home/vagrant/.ssh
+    - curtin in-target --target=/target -- chmod 600 /home/vagrant/.ssh/authorized_keys
