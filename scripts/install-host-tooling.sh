@@ -65,6 +65,18 @@ if [[ "${DEVFLEET_WITH_LIBVIRT:-0}" == "1" ]]; then
   systemctl enable --now libvirtd
   usermod -aG libvirt,kvm "$TARGET_USER" || true
 
+  # Ensure a 'default' storage pool exists (vagrant-libvirt uses it). Some hosts
+  # ship it; others don't — create it idempotently at the standard location.
+  if ! virsh -c qemu:///system pool-info default >/dev/null 2>&1; then
+    install -d -m 0711 /var/lib/libvirt/images
+    virsh -c qemu:///system pool-define-as default dir --target /var/lib/libvirt/images
+    virsh -c qemu:///system pool-start default
+    virsh -c qemu:///system pool-autostart default
+  fi
+  # Ensure the default NAT network is active (guests need it).
+  virsh -c qemu:///system net-autostart default 2>/dev/null || true
+  virsh -c qemu:///system net-start default 2>/dev/null || true
+
   # Install the plugin as the unprivileged user (plugins are per-user).
   if ! sudo -u "$TARGET_USER" vagrant plugin list 2>/dev/null | grep -q vagrant-libvirt; then
     sudo -u "$TARGET_USER" vagrant plugin install vagrant-libvirt || \

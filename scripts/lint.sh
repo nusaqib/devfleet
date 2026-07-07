@@ -23,6 +23,9 @@ else
 fi
 
 echo ">> vagrant validate"
-( cd "$ROOT/vagrant" && vagrant validate )
+# --ignore-provider: skip provider-specific checks (e.g. vboxsf synced-folder
+# "usability", which needs a running VM and fails when the vagrant-libvirt
+# plugin is also installed). We only want to validate the Vagrantfile config.
+( cd "$ROOT/vagrant" && vagrant validate --ignore-provider )
 
 echo ">> all checks passed"

@@ -10,10 +10,13 @@ config_path = File.join(File.dirname(__FILE__), "machines.yaml")
 cfg         = YAML.load_file(config_path)
 defaults    = cfg.fetch("defaults", {})
 
-# Which provider this run targets. `vagrant up --provider X` sets this env var;
-# otherwise fall back to VAGRANT_DEFAULT_PROVIDER, then virtualbox. We use it to
-# pick a provider-appropriate synced-folder mechanism (libvirt has no vboxsf).
-PROVIDER = ENV["VAGRANT_DEFAULT_PROVIDER"] || "virtualbox"
+# Which provider this run targets — used to pick a provider-appropriate
+# synced-folder mechanism (libvirt has no vboxsf). Honors either an explicit
+# `--provider=<x>` on the command line OR VAGRANT_DEFAULT_PROVIDER; defaults to
+# virtualbox. (Parsing ARGV lets `vagrant up --provider=libvirt` work without
+# also having to export the env var.)
+PROVIDER = (ARGV.join(" ")[/--provider[= ]([\w]+)/, 1]) ||
+           ENV["VAGRANT_DEFAULT_PROVIDER"] || "virtualbox"
 
 Vagrant.configure("2") do |config|
   cfg.fetch("machines").each do |m|

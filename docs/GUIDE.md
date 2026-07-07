@@ -140,6 +140,53 @@ playbook — only the builder and a couple of guest-integration steps differ
 > CPU's virtualization extension — only one hypervisor holds it at a time. On a
 > host used for both, don't run VirtualBox and libvirt VMs simultaneously.
 
+### Setting up on a new host (from scratch)
+
+Target: a Linux host with hardware virtualization (Intel VT-x / AMD-V). The
+installer script targets **Ubuntu 24.04**; adapt the package steps for other
+distros. Confirm virtualization is available first: `grep -Ec '(vmx|svm)' /proc/cpuinfo`
+should be > 0 (and `ls /dev/kvm` should exist for libvirt).
+
+```bash
+# 1. Clone the repo.
+git clone git@github.com:nusaqib/devfleet.git
+cd devfleet
+
+# 2. Install host tooling (needs sudo). Pick your provider(s):
+sudo scripts/install-host-tooling.sh                        # VirtualBox + Packer + Vagrant + Ansible
+#   …or also set up libvirt/KVM + the vagrant-libvirt plugin + default pool/net:
+sudo DEVFLEET_WITH_LIBVIRT=1 scripts/install-host-tooling.sh
+
+# 3. Apply new group membership (or just log out/in):
+newgrp vboxusers        # VirtualBox
+newgrp libvirt          # libvirt (if installed)
+
+# 4. Sanity-check every layer without booting a VM:
+make lint
+
+# 5a. Get boxes — EITHER build them locally (~8-15 min each):
+make build-ubuntu                         # both providers; or build-debian / build-rocky
+#     (single provider: scripts/build.sh ubuntu-2404 "" libvirt)
+# 5b. …OR pull prebuilt versioned boxes from a teammate's box host:
+cd vagrant
+vagrant box add http://BOXHOST:8099/ubuntu-2404/metadata.json
+
+# 6. Boot a machine (see "Spinning up machines — per provider" below):
+cd vagrant
+vagrant up ubuntu                         # VirtualBox
+vagrant up ubuntu --provider=libvirt      # libvirt
+```
+
+**What the installer sets up for you:** the HashiCorp apt repo (Packer/Vagrant),
+Oracle VirtualBox 7.1 + kernel headers, Ansible + ansible-lint, and adds you to
+`vboxusers`. With `DEVFLEET_WITH_LIBVIRT=1` it also installs QEMU/KVM + libvirt,
+the `vagrant-libvirt` plugin, starts `libvirtd`, adds you to `libvirt`/`kvm`,
+and ensures the `default` storage pool + NAT network exist.
+
+**macOS / Windows hosts:** install VirtualBox, Packer, Vagrant, and Ansible
+manually (Homebrew / winget), then use the VirtualBox provider. libvirt is
+Linux-only. (Building boxes on macOS/Windows also works via VirtualBox.)
+
 ---
 
 ## 5. Common workflows
@@ -155,17 +202,53 @@ make build                 # all three
 # Build a specific provider: scripts/build.sh <os> [version] <provider>
 scripts/build.sh ubuntu-2404 "" virtualbox    # just the VirtualBox box
 scripts/build.sh ubuntu-2404 "" libvirt       # just the libvirt box
+```
 
-# Boot & use the fleet (Vagrant). Provider defaults to virtualbox; pick libvirt
-# with --provider or VAGRANT_DEFAULT_PROVIDER:
-make up                    # boot all defined machines (virtualbox)
-cd vagrant && vagrant up ubuntu                       # virtualbox
-cd vagrant && vagrant up ubuntu --provider=libvirt    # same box, libvirt
-vagrant ssh ubuntu                    # log in
-vagrant provision ubuntu              # re-run the base playbook
+### Spinning up machines — per provider
+
+All Vagrant commands run from the `vagrant/` directory (`cd vagrant`).
+
+**VirtualBox** (the default provider — nothing extra needed):
+
+```bash
+cd vagrant
+vagrant up ubuntu                 # boot one machine
+vagrant up                        # boot the whole fleet
+vagrant ssh ubuntu                # log in
+vagrant halt ubuntu               # stop (keep disk)
+vagrant destroy -f ubuntu         # remove the VM (box stays)
+```
+
+**libvirt/QEMU** — pass `--provider=libvirt`. Your shell must be in the
+`libvirt` group (log out/in after install, or prefix a command with `sg libvirt -c '…'`):
+
+```bash
+cd vagrant
+vagrant up ubuntu --provider=libvirt      # boot on libvirt (same box name)
+vagrant ssh ubuntu                        # log in (provider is remembered)
+vagrant halt ubuntu
+vagrant destroy -f ubuntu
+
+# Prefer libvirt for a whole session without repeating the flag:
+export VAGRANT_DEFAULT_PROVIDER=libvirt
+vagrant up ubuntu
+```
+
+Notes:
+- A machine runs **one provider at a time**. To switch an existing machine from
+  VirtualBox to libvirt (or back), `vagrant destroy -f <name>` first, then bring
+  it up with the other provider.
+- Don't run VirtualBox and libvirt VMs **simultaneously** (VT-x contention).
+- After rebuilding a libvirt box, purge vagrant-libvirt's cached pool volume or
+  the old image is reused — see Troubleshooting §7.
+
+### Other lifecycle commands
+
+```bash
 make status                # what's running
-make down                  # halt (keeps the disks)
-make destroy               # remove the VMs (boxes stay; rebuildable)
+vagrant provision ubuntu   # re-run the base playbook on a running VM
+make down                  # halt the fleet (keeps disks)
+make destroy               # remove all VMs (boxes stay; rebuildable)
 ```
 
 ### Box versioning & sharing with teammates
