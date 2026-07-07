@@ -66,17 +66,18 @@ nothing left to do.
 ```
 devfleet/
 ├── packer/
-│   ├── sources.pkr.hcl        # ONE reusable virtualbox-iso source (+ plugins)
-│   ├── build.pkr.hcl          # shared provisioning + vagrant box post-processor
+│   ├── sources.pkr.hcl        # TWO reusable sources: virtualbox-iso + qemu
+│   ├── build.pkr.hcl          # shared provisioning; provider-scoped steps + box PP
 │   ├── variables.pkr.hcl      # variable DECLARATIONS
 │   ├── ubuntu-2404.pkrvars.hcl \
 │   ├── debian-12.pkrvars.hcl   }  per-OS VALUES (ISO, checksum, boot_command)
-│   ├── rocky-9.pkrvars.hcl    /
+│   ├── rocky-9.pkrvars.hcl    /   — shared by BOTH provider sources
 │   ├── http/                  # unattended installs served to the installer
 │   │   ├── ubuntu/{user-data,meta-data}   # Subiquity autoinstall (cloud-init)
 │   │   ├── debian/preseed.cfg             # debian-installer preseed
 │   │   └── rocky/ks.cfg                   # Anaconda kickstart
-│   └── scripts/{ansible-prereqs.sh,cleanup.sh}
+│   └── scripts/               # ansible-prereqs, cleanup,
+│                              # install-guest-additions (vbox), install-qemu-guest-agent
 ├── vagrant/
 │   ├── Vagrantfile            # data-driven; reads machines.yaml, loops over it
 │   └── machines.yaml          # THE FLEET — add a VM by adding a line here
@@ -115,13 +116,29 @@ Host tooling (Ubuntu 24.04 host — one command sets it all up):
 ```bash
 sudo scripts/install-host-tooling.sh   # VirtualBox 7.1, Packer, Vagrant, Ansible
 newgrp vboxusers                        # or log out/in
+
+# Optional: also set up the libvirt/QEMU provider (KVM + vagrant-libvirt plugin):
+sudo DEVFLEET_WITH_LIBVIRT=1 scripts/install-host-tooling.sh
+newgrp libvirt
 ```
 
-> **Provider note.** This repo uses **VirtualBox** for cross-platform portability.
-> On a Linux host that already runs **libvirt/KVM**, the two hypervisors contend
-> for VT-x — only one can hold it at a time. Shut down KVM VMs before running
-> VirtualBox VMs (or make libvirt the provider on that host; the design supports
-> swapping providers).
+### Providers — VirtualBox and libvirt/QEMU
+
+devfleet supports **two providers from one codebase**:
+
+| Provider | Box builder | Best for |
+|----------|-------------|----------|
+| **virtualbox** (default) | Packer `virtualbox-iso` | Cross-platform hosts (Linux/macOS/Windows) |
+| **libvirt** | Packer `qemu` (KVM) | Linux hosts — faster, native; needs `/dev/kvm` |
+
+Both providers are built from the **same** per-OS config and the **same** Ansible
+playbook — only the builder and a couple of guest-integration steps differ
+(VirtualBox Guest Additions vs. `qemu-guest-agent`). A single box name, e.g.
+`devfleet/ubuntu-2404`, carries **both** providers in its versioned metadata.
+
+> **VT-x contention.** VirtualBox and an actively-running KVM VM contend for the
+> CPU's virtualization extension — only one hypervisor holds it at a time. On a
+> host used for both, don't run VirtualBox and libvirt VMs simultaneously.
 
 ---
 
@@ -132,12 +149,18 @@ newgrp vboxusers                        # or log out/in
 make lint
 
 # Build boxes (Packer). ~8-15 min each; downloads the ISO on first run.
-make build-ubuntu          # or build-debian / build-rocky
+make build-ubuntu          # or build-debian / build-rocky  (both providers)
 make build                 # all three
 
-# Boot & use the fleet (Vagrant):
-make up                    # boot all defined machines
-cd vagrant && vagrant up ubuntu       # boot just one
+# Build a specific provider: scripts/build.sh <os> [version] <provider>
+scripts/build.sh ubuntu-2404 "" virtualbox    # just the VirtualBox box
+scripts/build.sh ubuntu-2404 "" libvirt       # just the libvirt box
+
+# Boot & use the fleet (Vagrant). Provider defaults to virtualbox; pick libvirt
+# with --provider or VAGRANT_DEFAULT_PROVIDER:
+make up                    # boot all defined machines (virtualbox)
+cd vagrant && vagrant up ubuntu                       # virtualbox
+cd vagrant && vagrant up ubuntu --provider=libvirt    # same box, libvirt
 vagrant ssh ubuntu                    # log in
 vagrant provision ubuntu              # re-run the base playbook
 make status                # what's running

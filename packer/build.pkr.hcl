@@ -1,10 +1,14 @@
-// The build block. Reuses ONE source and applies the SAME provisioning to every
-// OS: install Ansible prereqs, run the shared `base` playbook, then clean up.
+// The build block. Both provider sources share the SAME provisioning: install
+// Ansible prereqs, run the shared `base` playbook, clean up. Provider-specific
+// steps (Guest Additions vs qemu-guest-agent) are scoped with `only`.
 // This is the crux of reproducibility — build-time and run-time share the role.
 
 build {
-  name    = "devfleet"
-  sources = ["source.virtualbox-iso.vm"]
+  name = "devfleet"
+  sources = [
+    "source.virtualbox-iso.vm",
+    "source.qemu.vm",
+  ]
 
   // 1. Ensure Python/Ansible prerequisites exist in the guest.
   provisioner "shell" {
@@ -22,10 +26,18 @@ build {
     ansible_env_vars = ["ANSIBLE_CONFIG=${path.root}/../ansible/ansible.cfg"]
   }
 
-  // 3. Install VirtualBox Guest Additions (native shared folders / clipboard).
+  // 3a. VirtualBox only: install Guest Additions (native vboxsf / clipboard).
   provisioner "shell" {
+    only            = ["virtualbox-iso.vm"]
     execute_command = "echo '${var.ssh_password}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
     script          = "${path.root}/scripts/install-guest-additions.sh"
+  }
+
+  // 3b. QEMU/libvirt only: install the guest agent (host<->guest integration).
+  provisioner "shell" {
+    only            = ["qemu.vm"]
+    execute_command = "echo '${var.ssh_password}' | {{ .Vars }} sudo -S -E bash '{{ .Path }}'"
+    script          = "${path.root}/scripts/install-qemu-guest-agent.sh"
   }
 
   // 4. Zero out logs/history/free space so the box is small and clean.
@@ -35,7 +47,8 @@ build {
     expect_disconnect = true
   }
 
-  // 5. Emit a Vagrant box consumable by the vagrant/ layer.
+  // 5. Emit a Vagrant box. {{ .Provider }} is "virtualbox" or "libvirt"
+  //    depending on which source produced it.
   post-processor "vagrant" {
     output = "${path.root}/../builds/${var.os_name}-{{ .Provider }}.box"
   }

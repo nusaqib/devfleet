@@ -6,7 +6,8 @@ Reproducible, scalable, maintainable development VM infrastructure as code — d
 
 ## Stack (chosen)
 
-- **Provider:** VirtualBox (portable across Linux/macOS/Windows hosts)
+- **Providers:** VirtualBox (portable) **and** libvirt/QEMU (KVM, fast on Linux) —
+  built from one codebase; a box name carries both
 - **OS matrix:** Ubuntu 24.04, Debian 12, Rocky 9
 - **Cloud:** out of scope for now (local only)
 

@@ -5,6 +5,12 @@
       "version": "2.0.0",
       "providers": [
         {
+          "name": "libvirt",
+          "url": "file:///home/nusaqib/gitsrc/experiments/devfleet/boxes/ubuntu-2404/ubuntu-2404-2.0.0-libvirt.box",
+          "checksum_type": "sha256",
+          "checksum": "b2a4a50885d1fe47bab3562303e82ceff7399c479e65ba915ff68199e1009aa6"
+        },
+        {
           "name": "virtualbox",
           "url": "file:///home/nusaqib/gitsrc/experiments/devfleet/boxes/ubuntu-2404/ubuntu-2404-2.0.0.box",
           "checksum_type": "sha256",

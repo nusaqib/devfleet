@@ -10,6 +10,11 @@ config_path = File.join(File.dirname(__FILE__), "machines.yaml")
 cfg         = YAML.load_file(config_path)
 defaults    = cfg.fetch("defaults", {})
 
+# Which provider this run targets. `vagrant up --provider X` sets this env var;
+# otherwise fall back to VAGRANT_DEFAULT_PROVIDER, then virtualbox. We use it to
+# pick a provider-appropriate synced-folder mechanism (libvirt has no vboxsf).
+PROVIDER = ENV["VAGRANT_DEFAULT_PROVIDER"] || "virtualbox"
+
 Vagrant.configure("2") do |config|
   cfg.fetch("machines").each do |m|
     config.vm.define m["name"] do |node|
@@ -22,26 +27,41 @@ Vagrant.configure("2") do |config|
       node.vm.network "forwarded_port",
         guest: 22, host: m["ssh_port"], id: "ssh", auto_correct: true
 
+      cpus   = m.fetch("cpus", defaults["cpus"])
+      memory = m.fetch("memory", defaults["memory"])
+      gui    = m.fetch("gui", defaults.fetch("gui", false))
+
       node.vm.provider "virtualbox" do |vb|
         vb.name   = "devfleet-#{m['name']}"
-        vb.cpus   = m.fetch("cpus", defaults["cpus"])
-        vb.memory = m.fetch("memory", defaults["memory"])
+        vb.cpus   = cpus
+        vb.memory = memory
 
         # `gui: true` in machines.yaml shows the VM window and gives it enough
         # video memory for a desktop. (Needs Guest Additions for live resize.)
-        if m.fetch("gui", defaults.fetch("gui", false))
+        if gui
           vb.gui = true
           vb.customize ["modifyvm", :id, "--vram", "128",
                         "--graphicscontroller", "vmsvga"]
         end
       end
 
-      # Synced-folder mechanism is per-OS (see machines.yaml): "virtualbox"
-      # (native vboxsf, needs Guest Additions) where GA builds, else "rsync".
-      sf_type = m.fetch("synced_folder_type", defaults.fetch("synced_folder_type", "rsync"))
+      # libvirt/QEMU provider — only if the plugin is installed (else ignored).
+      if Vagrant.has_plugin?("vagrant-libvirt")
+        node.vm.provider "libvirt" do |lv|
+          lv.cpus   = cpus
+          lv.memory = memory
+          lv.graphics_type = gui ? "spice" : "none"
+        end
+      end
 
-      # The default /vagrant mount only works with Guest Additions; enable it
-      # natively when we have GA, otherwise disable it (we don't require it).
+      # Synced-folder mechanism. VirtualBox can use native "virtualbox" (vboxsf,
+      # needs Guest Additions) per-OS from machines.yaml. libvirt has no vboxsf,
+      # so it always uses rsync (works without any guest tooling).
+      sf_type = m.fetch("synced_folder_type", defaults.fetch("synced_folder_type", "rsync"))
+      sf_type = "rsync" if PROVIDER == "libvirt"
+
+      # The default /vagrant mount only works via vboxsf; enable it natively when
+      # we have GA (virtualbox + type virtualbox), otherwise disable it.
       if sf_type == "virtualbox"
         node.vm.synced_folder ".", "/vagrant", type: "virtualbox"
       else

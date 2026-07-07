@@ -60,8 +60,21 @@
 - GA on Rocky needs either a newer Guest Additions release or a kernel-module
   patch; revisit when VBox ships GA compatible with the EL9 kernel.
 
-## Phase 3 — Scale & maintain
-- [x] CI: validate/lint on every PR (`.github/workflows/lint.yml`).
-- [ ] Nightly image rebuilds for security patches (scheduled workflow).
-- [ ] Optional Terraform module to run the same images in the cloud.
-- [ ] Docs: architecture decision records + runbook per OS.
+## Phase 4 — Second provider: libvirt/QEMU (2026-07-07)
+- [x] Packer `qemu` source alongside `virtualbox-iso`, sharing the same per-OS
+      config, http installers, and boot_command. Provider-specific steps scoped
+      with `only` (Guest Additions for vbox, qemu-guest-agent for qemu).
+- [x] `build.sh <os> [version] <provider>` selects virtualbox | libvirt | both.
+- [x] `publish-box.sh` merges providers into ONE box version — a single box name
+      (e.g. `devfleet/ubuntu-2404`) carries both virtualbox and libvirt.
+- [x] Vagrantfile: `libvirt` provider block (guarded by `vagrant-libvirt`
+      plugin), provider chosen via `VAGRANT_DEFAULT_PROVIDER`/`--provider`;
+      libvirt uses rsync synced folders.
+- [x] `install-host-tooling.sh DEVFLEET_WITH_LIBVIRT=1` sets up KVM/libvirt +
+      the vagrant-libvirt plugin.
+- [ ] Boot-test libvirt provider end-to-end (needs host libvirt setup — sudo).
+
+## Later / optional
+- [ ] Nightly image rebuilds for security patches (self-hosted runner + schedule).
+- [ ] dotfiles/editor-config role; language version managers; desktop role.
+- [ ] Docs: architecture decision records + per-OS runbooks.

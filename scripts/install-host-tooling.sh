@@ -2,10 +2,11 @@
 # Install devfleet host tooling on Ubuntu 24.04 (noble): VirtualBox, Packer,
 # Vagrant, Ansible. Idempotent — safe to re-run. Requires root (run with sudo).
 #
-#   sudo scripts/install-host-tooling.sh
+#   sudo scripts/install-host-tooling.sh                      # VirtualBox only
+#   sudo DEVFLEET_WITH_LIBVIRT=1 scripts/install-host-tooling.sh  # + libvirt/KVM
 #
-# After it finishes, log out/in (or `newgrp vboxusers`) so the vboxusers group
-# membership takes effect for your user.
+# After it finishes, log out/in (or `newgrp vboxusers` / `newgrp libvirt`) so the
+# group memberships take effect for your user.
 set -euo pipefail
 
 if [[ $EUID -ne 0 ]]; then
@@ -51,16 +52,37 @@ apt-get install -y ansible ansible-lint
 # Let the user run VirtualBox without root.
 usermod -aG vboxusers "$TARGET_USER" || true
 
+# --- libvirt / QEMU provider (optional second provider) ----------------------
+# Set DEVFLEET_WITH_LIBVIRT=1 to also set up KVM/libvirt + the vagrant-libvirt
+# plugin, so `vagrant up --provider=libvirt` works alongside VirtualBox.
+if [[ "${DEVFLEET_WITH_LIBVIRT:-0}" == "1" ]]; then
+  echo ">> installing libvirt/QEMU stack"
+  apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients \
+    virtinst bridge-utils qemu-utils
+  # Build deps for the vagrant-libvirt plugin's native extension.
+  apt-get install -y libvirt-dev ruby-dev gcc make pkg-config
+
+  systemctl enable --now libvirtd
+  usermod -aG libvirt,kvm "$TARGET_USER" || true
+
+  # Install the plugin as the unprivileged user (plugins are per-user).
+  if ! sudo -u "$TARGET_USER" vagrant plugin list 2>/dev/null | grep -q vagrant-libvirt; then
+    sudo -u "$TARGET_USER" vagrant plugin install vagrant-libvirt || \
+      echo "WARN: vagrant-libvirt plugin install failed — check libvirt-dev/ruby-dev." >&2
+  fi
+fi
+
 echo
 echo "=== versions ==="
 vboxmanage --version || true
 packer version || true
 vagrant --version || true
 ansible --version | head -1 || true
+[[ "${DEVFLEET_WITH_LIBVIRT:-0}" == "1" ]] && { virsh --version || true; }
 
 echo
 echo "NOTE: if this machine has UEFI Secure Boot ENABLED, the VirtualBox kernel"
 echo "modules must be signed/enrolled (MOK) or VMs won't start. Check with:"
 echo "    mokutil --sb-state    (if 'SecureBoot enabled', follow the dkms MOK prompt)"
 echo
-echo "Log out/in (or run: newgrp vboxusers) so group membership applies."
+echo "Log out/in (or: newgrp vboxusers; newgrp libvirt) so group membership applies."
