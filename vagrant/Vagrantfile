@@ -51,6 +51,9 @@ Vagrant.configure("2") do |config|
           lv.cpus   = cpus
           lv.memory = memory
           lv.graphics_type = gui ? "spice" : "none"
+          # Wire up the qemu guest agent channel so vagrant-libvirt can read the
+          # guest IP via the agent (a second path besides the DHCP lease).
+          lv.qemu_use_agent = true
         end
       end
 

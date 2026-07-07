@@ -72,7 +72,13 @@
       libvirt uses rsync synced folders.
 - [x] `install-host-tooling.sh DEVFLEET_WITH_LIBVIRT=1` sets up KVM/libvirt +
       the vagrant-libvirt plugin.
-- [ ] Boot-test libvirt provider end-to-end (needs host libvirt setup — sudo).
+- [x] Boot-tested libvirt end-to-end: `vagrant up ubuntu --provider=libvirt` gets
+      a DHCP IP, SSHes, and runs the shared playbook (ok=13, changed=0). Required a
+      provider-portable netplan (match-any, via shell provisioner) because the
+      subiquity box pins the NIC name; and purging vagrant-libvirt's cached pool
+      volume so rebuilt boxes actually take effect.
+- [ ] Build + boot-test Debian/Rocky on libvirt (Debian=ifupdown, Rocky=NM need
+      their own portable-network handling; Ubuntu done).
 
 ## Later / optional
 - [ ] Nightly image rebuilds for security patches (self-hosted runner + schedule).

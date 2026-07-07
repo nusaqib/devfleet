@@ -8,7 +8,7 @@
           "name": "libvirt",
           "url": "file:///home/nusaqib/gitsrc/experiments/devfleet/boxes/ubuntu-2404/ubuntu-2404-2.0.0-libvirt.box",
           "checksum_type": "sha256",
-          "checksum": "b2a4a50885d1fe47bab3562303e82ceff7399c479e65ba915ff68199e1009aa6"
+          "checksum": "0b45ec4641b49d58afd1c3bdef07d3ea51645ccaf73cc7c4ea19a3e835c1b90f"
         },
         {
           "name": "virtualbox",

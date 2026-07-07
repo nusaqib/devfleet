@@ -79,7 +79,9 @@ PY
 cp -f "$BOX_SRC" "$DEST_DIR/${OS}-${VERSION}-${PROVIDER}.box"
 
 echo ">> publishing ${BOX_NAME} v${VERSION} [${PROVIDER}] (base_url=${BASE_URL})"
-# --provider avoids the interactive "which provider?" prompt when a version
-# carries more than one (which would need a TTY and fail under nohup/CI).
+# Explicitly remove-then-add: `vagrant box add --force` does NOT reliably replace
+# an existing same-version box in the store, so a rebuilt image would be ignored.
+vagrant box remove "$BOX_NAME" --provider "$PROVIDER" --box-version "$VERSION" --force 2>/dev/null || true
+# --provider avoids the interactive "which provider?" prompt on multi-provider boxes.
 vagrant box add --provider "$PROVIDER" --force "$META"
 echo ">> published ${BOX_NAME} v${VERSION} [${PROVIDER}]"

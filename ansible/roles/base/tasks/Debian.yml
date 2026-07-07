@@ -11,3 +11,7 @@
       - build-essential
     state: present
   when: base_install_build_tools | bool
+
+# NOTE: provider-portable networking (match-any-ethernet netplan) is handled by
+# packer/scripts/network-portable.sh at image-build time — a shell step lands in
+# the image reliably, whereas Ansible file-copy over Packer's SSH proxy did not.

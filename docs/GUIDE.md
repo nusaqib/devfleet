@@ -282,6 +282,8 @@ These are things that actually bit us; documented so they don't bite again.
 | GRUB vs isolinux boot commands | VirtualBox boots most ISOs in **BIOS** mode. Ubuntu/Rocky-DVD use GRUB (`e` to edit, `<f10>`/Ctrl-X to boot); Debian netinst and the **Rocky boot ISO** use **isolinux** (`<tab>` to append options, `<enter>` to boot). Using the wrong one leaves you stuck at the menu. |
 | Ansible: *`community.general.yaml` callback removed* | Version skew — a newer collection dropped that callback. `ansible.cfg` uses the built-in `default` callback with `result_format=yaml` instead. |
 | GA fails to compile (`Error 2`, `incompatible-pointer-types`) | Some OS/kernel/GA-version combos don't build (seen on Rocky 9.8 with VBox 7.1 GA). This is **best-effort** — the build continues and that OS uses rsync (`synced_folder_type: rsync` in `machines.yaml`). Check `/etc/devfleet-guest-additions` in the box. |
+| libvirt: stuck at "Waiting for domain to get an IP address" | The Ubuntu installer pins netplan to the build-time NIC name (`ens3`); libvirt presents `ens5` → no DHCP. Fixed by `packer/scripts/network-portable.sh` (match-any netplan) baked at build. If you still see it, the box predates the fix — rebuild. |
+| libvirt: rebuilt box changes not showing up | vagrant-libvirt **caches the box as a storage-pool volume** and reuses it. `vagrant box add` alone won't refresh it — delete the volume: `virsh -c qemu:///system vol-delete devfleet-VAGRANTSLASH-<os>_vagrant_box_image_<ver>_box_0.img --pool default`, then `vagrant up`. |
 | Vagrant: `vboxsf` mount fails for an OS | That box's GA didn't build. Set `synced_folder_type: rsync` for it in `machines.yaml`. |
 
 ---
