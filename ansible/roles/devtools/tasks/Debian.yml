@@ -8,9 +8,11 @@
     cache_valid_time: 3600
   when: devtools_install_build_tools | bool
 
-- name: Install Docker (Debian family, distro package)
+- name: Install Docker + Compose plugin (Debian family, distro packages)
   ansible.builtin.apt:
-    name: docker.io
+    name:
+      - docker.io
+      - docker-compose-v2   # provides `docker compose` (used by e.g. bluesky)
     state: present
   when: devtools_install_container_runtime | bool
 

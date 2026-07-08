@@ -6,3 +6,6 @@ distro:
   system_ca_trust_dir: "/usr/local/share/ca-certificates"
   system_ca_trust_update: "/usr/sbin/update-ca-certificates"
   lib_dirname: "lib"
+
+# Container command used by roles like bluesky.
+docker: "docker"

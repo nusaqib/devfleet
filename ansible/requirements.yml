@@ -1,5 +1,11 @@
 ---
-# Ansible collections the base role depends on.
+# Ansible collections used by devfleet's roles.
+# (The `ansible` community package bundles these; listed for explicitness / when
+# running on ansible-core.)
 collections:
   - name: community.general
     version: ">=8.0.0"
+  - name: community.docker      # bluesky (docker_image)
+    version: ">=3.0.0"
+  - name: community.mysql       # archiver_appliance (MariaDB setup)
+    version: ">=3.0.0"

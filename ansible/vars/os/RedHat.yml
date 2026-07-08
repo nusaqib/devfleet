@@ -5,3 +5,6 @@ distro:
   system_ca_trust_dir: "/etc/pki/ca-trust/source/anchors"
   system_ca_trust_update: "/usr/bin/update-ca-trust"
   lib_dirname: "lib64"
+
+# Container command used by roles like bluesky.
+docker: "podman"

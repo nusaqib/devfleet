@@ -104,6 +104,11 @@
     daemon_reload: true
 
 - name: Add Firefox bookmark
-  when: not in_container
+  # devfleet: opt-in (default off). The upstream step assumes a pre-installed,
+  # pre-launched Firefox with a profile (training-vm's desktop box); devfleet's
+  # minimal boxes don't have that, and the archiver itself works without it.
+  when:
+    - not in_container
+    - archiver_add_firefox_bookmark | default(false) | bool
   ansible.builtin.include_tasks:
     file: add_firefox_bookmark.yml

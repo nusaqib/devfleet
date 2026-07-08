@@ -82,5 +82,14 @@
 
 ## Later / optional
 - [ ] Nightly image rebuilds for security patches (self-hosted runner + schedule).
-- [ ] dotfiles/editor-config role; language version managers; desktop role.
+- [ ] dotfiles/editor-config role; language version managers.
 - [ ] Docs: architecture decision records + per-OS runbooks.
+
+## Phase 5 — EPICS ecosystem (2026-07-08)
+- [x] Vendored EPICS roles from training-vm: m_base + modules (asyn, autosave,
+      sscan, calc, seq, stream, p4p, opcua; pvaPy/areadetector are Rocky-only).
+- [x] High-level roles: phoebus (GUI, built), java, oac_tree, bluesky (validated),
+      archiver_appliance (validated — mgmt UI HTTP 200). docker/catrust available.
+- [x] Net-new `desktop` role (XFCE + LightDM + autologin + spice-vdagent); GUI
+      verified over libvirt SPICE on the `epics` machine.
+- [x] All opt-in per-machine via extra_vars; vendored roles lint-excluded.

@@ -372,9 +372,19 @@ The EPICS roles are **vendored** from the upstream
   `m_areadetector`** (Rocky only — `pvaPy` doesn't build on Ubuntu, and
   `areadetector` depends on it).
 - High-level tools — **`phoebus`** (CS-Studio GUI, needs `java` + a desktop),
-  **`oac_tree`**, **`bluesky`** (Python DAQ, uses `dev_user`), and
-  **`archiver_appliance`** (java + MySQL + Tomcat). Support roles: **`java`**
-  (Temurin JDK 21), **`docker`**, **`catrust`**.
+  **`oac_tree`**, **`bluesky`** (Python DAQ via a Docker Compose stack; runs as
+  `dev_user`), and **`archiver_appliance`** (Java + MariaDB + Tomcat; mgmt UI on
+  `http://localhost:17665/mgmt/ui/`). Support role: **`java`** (Temurin JDK 21).
+  Docker (+ compose) comes from the `devtools` role. Enable a tool via its flag,
+  e.g. `extra_vars: { bluesky: true, archiver_appliance: true }`.
+
+Notes on the high-level roles (validated on the `epics` VM):
+- **bluesky** clones the HZB training repo and pulls several large container
+  images (~15 GB total) — first run is slow and needs disk headroom. Use
+  `bluesky_start` in a shell after provisioning.
+- **archiver_appliance** installs MariaDB + Tomcat + the appliance webapp. Its
+  optional Firefox-bookmark step is off by default (`archiver_add_firefox_bookmark`)
+  since it assumes a pre-configured browser.
 
 Everything installs under **`/opt/epics/<module>-<version>/`** (tools) and
 **`/opt/epics-tools/`** (java/maven/phoebus), with `RELEASE.local` wired up

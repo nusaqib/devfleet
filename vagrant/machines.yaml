@@ -73,3 +73,6 @@ machines:
       m_opcua: true
       # GUI EPICS control-system tool (pulls in java; needs the desktop)
       phoebus: true
+      # High-level services (heavier)
+      bluesky: true              # data acquisition (docker compose; clones HZB repo)
+      archiver_appliance: true   # EPICS Archiver Appliance (MariaDB + Tomcat)
