@@ -15,19 +15,45 @@
     # Facts the vendored EPICS roles expect (from the upstream training-vm repo).
     is_debian: "{{ ansible_facts['os_family'] == 'Debian' }}"
     is_redhat: "{{ ansible_facts['os_family'] == 'RedHat' }}"
+    # The unprivileged dev account (used by e.g. the bluesky role). devfleet uses
+    # the vagrant user; override per machine if you want a separate account.
+    dev_user: "vagrant"
+  pre_tasks:
+    # Load OS-specific paths (the `distro.*` dict) the vendored EPICS roles use.
+    - name: Load OS-specific variables
+      ansible.builtin.include_vars: "{{ item }}"
+      with_first_found:
+        - files:
+            - "{{ ansible_facts['distribution'] }}.yml"
+            - "{{ ansible_facts['os_family'] }}.yml"
+            - "default.yml"
+          paths:
+            - "{{ playbook_dir }}/vars/os"
+      tags: always
   roles:
     - base
     # Dev tooling — set devfleet_install_devtools=false for a minimal box.
     - role: devtools
       when: devfleet_install_devtools | default(true) | bool
+    # Lightweight XFCE desktop (pair with `gui: true` in machines.yaml).
+    - role: desktop
+      when: devfleet_install_desktop | default(false) | bool
+
+    # --- Support roles for the EPICS high-level tools ---------------------------
+    - role: java                     # Temurin JDK 21 (needed by phoebus/archiver)
+      when: java | default(false) | bool
+    - role: docker
+      when: docker | default(false) | bool
+    - role: catrust                  # corporate CA trust (off unless behind DPI proxy)
+      when: catrust | default(false) | bool
 
     # --- EPICS ecosystem (opt-in per machine via machines.yaml extra_vars) ------
     # Roles vendored from the EPICS training-vm project. Each is off by default and
     # enabled with its flag, e.g. extra_vars: { m_base: true, m_asyn: true }.
     # Modules depend on m_base (meta), so enabling a module pulls Base in; the
     # build is source-compiled once and flag-file cached under /opt/epics/.flag.
-    # Order below respects the dependency chain (sscan before calc; asyn+calc
-    # before stream).
+    # Order respects the dependency chain (sscan<-calc; asyn+calc<-stream;
+    # base+asyn+autosave+pvaPy<-areadetector).
     - role: m_base
       when: m_base | default(false) | bool
     - role: m_asyn
@@ -42,3 +68,23 @@
       when: m_seq | default(false) | bool
     - role: m_stream
       when: m_stream | default(false) | bool
+    # Additional modules. NOTE: m_pvaPy (and thus m_areadetector, which depends on
+    # it) do NOT build on Ubuntu — use them on Rocky. m_opcua/m_p4p are Ubuntu-safe.
+    - role: m_p4p
+      when: m_p4p | default(false) | bool
+    - role: m_opcua
+      when: m_opcua | default(false) | bool
+    - role: m_pvaPy
+      when: m_pvaPy | default(false) | bool
+    - role: m_areadetector
+      when: m_areadetector | default(false) | bool
+
+    # --- EPICS high-level tools (heavier; opt-in) -------------------------------
+    - role: oac_tree
+      when: oac_tree | default(false) | bool
+    - role: phoebus                  # CS-Studio Phoebus GUI (maven build; needs a desktop)
+      when: phoebus | default(false) | bool
+    - role: bluesky                  # Bluesky data-acquisition (python; uses dev_user)
+      when: bluesky | default(false) | bool
+    - role: archiver_appliance       # EPICS Archiver Appliance (java + mysql + tomcat)
+      when: archiver_appliance | default(false) | bool

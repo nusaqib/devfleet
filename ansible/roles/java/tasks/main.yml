@@ -1,0 +1,37 @@
+# Install Java
+---
+- name: Ensure java_home directory exists
+  become: true
+  file:
+    path: "{{ java_home }}"
+    state: directory
+
+- name: Install open jdk 21
+  become: true
+  ansible.builtin.unarchive:
+    src: "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.9%2B10/OpenJDK21U-jdk_{{ (ansible_facts['architecture'] == 'x86_64') | ternary('x64', ansible_facts['architecture']) }}_linux_hotspot_21.0.9_10.tar.gz"
+    dest: "{{ java_home }}"
+    remote_src: true
+    creates: "{{ java_home }}/bin/java"
+    extra_opts:
+      - --strip-components=1
+
+- name: Check if CA certificate (DER format) exists
+  ansible.builtin.stat:
+    path: "{{ ca_trust_der_path }}"
+  register: ca_cert_der
+  changed_when: false
+  when: ca_trust_der_path is defined
+
+- name: Add CA certificate to java trust store
+  community.general.java_cert:
+    cert_path: "{{ ca_trust_der_path }}"
+    keystore_path: "{{ java_home }}/lib/security/cacerts"
+    keystore_pass: changeit
+    state: present
+    cert_alias: Training_VM_RootCA
+    trust_cacert: true
+  become: true
+  environment:
+    PATH: "{{ java_home }}/bin:{{ ansible_env.PATH }}"
+  when: ca_trust_der_path is defined and ca_cert_der.stat.exists

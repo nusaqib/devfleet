@@ -56,8 +56,11 @@ machines:
     ssh_port: 2225
     memory: 8192          # EPICS source compiles (esp. PVXS) are memory-hungry
     cpus: 4
+    gui: true             # expose a display (libvirt SPICE / VirtualBox window)
     synced_folder_type: virtualbox   # forced to rsync automatically on libvirt
     extra_vars:
+      devfleet_install_desktop: true # XFCE desktop + autologin
+      # EPICS base + core modules
       m_base: true
       m_asyn: true
       m_autosave: true
@@ -65,3 +68,8 @@ machines:
       m_calc: true
       m_seq: true
       m_stream: true
+      # extra Ubuntu-safe modules
+      m_p4p: true
+      m_opcua: true
+      # GUI EPICS control-system tool (pulls in java; needs the desktop)
+      phoebus: true

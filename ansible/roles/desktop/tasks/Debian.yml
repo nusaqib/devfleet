@@ -1,0 +1,16 @@
+---
+# XFCE + LightDM on Debian/Ubuntu. A minimal set (not the full xubuntu-desktop
+# metapackage) to keep the image lean. spice-vdagent enables SPICE integration
+# on libvirt; VirtualBox uses its Guest Additions instead.
+- name: Install XFCE desktop + LightDM (Debian family)
+  ansible.builtin.apt:
+    name:
+      - xfce4
+      - xfce4-goodies
+      - lightdm
+      - lightdm-gtk-greeter
+      - dbus-x11
+      - spice-vdagent
+    state: present
+    install_recommends: false
+    update_cache: true

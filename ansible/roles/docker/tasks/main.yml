@@ -1,0 +1,9 @@
+- name: Install podman and compose
+  include_tasks:
+    file: podman.yml
+  when: is_redhat
+
+- name: Install dockerce
+  include_tasks:
+    file: docker.yml
+  when: is_debian

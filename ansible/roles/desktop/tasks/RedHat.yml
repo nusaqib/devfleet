@@ -1,0 +1,19 @@
+---
+# XFCE (from EPEL) + LightDM on RHEL/Rocky. EPEL provides the Xfce group.
+- name: Ensure EPEL is present (Xfce group lives there)
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+
+- name: Install X server base + LightDM + SPICE agent (RedHat family)
+  ansible.builtin.dnf:
+    name:
+      - "@base-x"
+      - lightdm
+      - spice-vdagent
+    state: present
+
+- name: Install the Xfce group (RedHat family)
+  ansible.builtin.dnf:
+    name: "@Xfce"
+    state: present

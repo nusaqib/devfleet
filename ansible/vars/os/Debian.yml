@@ -1,0 +1,8 @@
+---
+# OS-specific paths the vendored EPICS roles reference as `distro.*`.
+distro:
+  installer: "apt"
+  openssl_config: "/etc/ssl/openssl.cnf"
+  system_ca_trust_dir: "/usr/local/share/ca-certificates"
+  system_ca_trust_update: "/usr/sbin/update-ca-certificates"
+  lib_dirname: "lib"

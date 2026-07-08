@@ -1,0 +1,5 @@
+# Dependencies for phoebus
+---
+allow_duplicates: true
+dependencies:
+  - role: java

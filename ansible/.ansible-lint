@@ -21,3 +21,14 @@ exclude_paths:
   - roles/m_calc/
   - roles/m_seq/
   - roles/m_stream/
+  - roles/m_p4p/
+  - roles/m_opcua/
+  - roles/m_pvaPy/
+  - roles/m_areadetector/
+  - roles/java/
+  - roles/docker/
+  - roles/catrust/
+  - roles/phoebus/
+  - roles/bluesky/
+  - roles/oac_tree/
+  - roles/archiver_appliance/

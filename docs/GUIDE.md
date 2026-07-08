@@ -368,11 +368,23 @@ The EPICS roles are **vendored** from the upstream
   owns the reusable build machinery every module reuses.
 - Core modules — **`m_asyn`, `m_autosave`, `m_sscan`, `m_calc`, `m_seq`,
   `m_stream`** (each depends on `m_base`).
+- Extra modules — **`m_p4p`, `m_opcua`** (Ubuntu-safe), and **`m_pvaPy`,
+  `m_areadetector`** (Rocky only — `pvaPy` doesn't build on Ubuntu, and
+  `areadetector` depends on it).
+- High-level tools — **`phoebus`** (CS-Studio GUI, needs `java` + a desktop),
+  **`oac_tree`**, **`bluesky`** (Python DAQ, uses `dev_user`), and
+  **`archiver_appliance`** (java + MySQL + Tomcat). Support roles: **`java`**
+  (Temurin JDK 21), **`docker`**, **`catrust`**.
 
-Everything installs under **`/opt/epics/<module>-<version>/`**, with `RELEASE.local`
-wired up automatically and a login PATH via **`/etc/profile.d/epics-tools.sh`**.
-Builds are **flag-file cached** (`/opt/epics/.flag/`) so re-provisioning is a no-op
-once built.
+Everything installs under **`/opt/epics/<module>-<version>/`** (tools) and
+**`/opt/epics-tools/`** (java/maven/phoebus), with `RELEASE.local` wired up
+automatically and a login PATH via **`/etc/profile.d/epics-tools.sh`**. Builds are
+**flag-file cached** (`/opt/epics/.flag/`) so re-provisioning is a no-op once built.
+
+> **Compatibility & size.** On **Ubuntu** all of the above build except `m_pvaPy`
+> / `m_areadetector` (Rocky-only). Source compiles are memory-hungry — give EPICS
+> machines **≥ 8 GB**. `phoebus` and `archiver_appliance` are heavy (maven /
+> mysql+tomcat); expect long first builds.
 
 ### Spin up an EPICS VM
 
@@ -416,6 +428,36 @@ Notes:
   otherwise the flag-file cache skips already-built modules.
 - **OS support:** on **Ubuntu** all core modules build; `pvaPy` is the known
   exception (excluded). **Rocky** builds everything.
+
+### Desktop / GUI on a machine
+
+To run GUI tools (e.g. Phoebus), a machine needs **two** things — a desktop
+*installed* and a display *exposed by the provider*:
+
+1. **Install** the lightweight XFCE desktop (devfleet's own `desktop` role):
+   `extra_vars: { devfleet_install_desktop: true }`. It installs XFCE + LightDM +
+   `spice-vdagent`, sets the graphical boot target, and auto-logs in the `vagrant`
+   user.
+2. **Expose a display** with `gui: true` in `machines.yaml` — the Vagrantfile then
+   gives the VM a VirtualBox window, or a **libvirt SPICE** display.
+
+The ready-made **`epics` machine** has both (`gui: true` + desktop + Phoebus).
+
+**Viewing the desktop:**
+- **VirtualBox** — a VM window opens automatically on `vagrant up`.
+- **libvirt** — connect to the SPICE display (the VM is otherwise headless to your
+  terminal):
+  ```bash
+  virt-manager --connect qemu:///system          # GUI: double-click the domain
+  # …or directly:
+  virt-viewer --connect qemu:///system vagrant_epics
+  ```
+- Log in as `vagrant` / `vagrant` if not auto-logged-in. Launch Phoebus with
+  `run-phoebus` from a terminal in the desktop.
+
+> Changing `gui:` on an **already-created** libvirt VM doesn't add the display
+> device — recreate it (`vagrant destroy epics && vagrant up epics`) so the domain
+> is defined with SPICE graphics.
 
 ### Add another EPICS module
 

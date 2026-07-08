@@ -1,0 +1,7 @@
+---
+# Lightweight XFCE desktop for a devfleet machine. Enable per-machine with
+# `extra_vars: { devfleet_install_desktop: true }` and set `gui: true` in
+# machines.yaml so the provider exposes a display (VirtualBox window / libvirt
+# SPICE).
+desktop_user: "vagrant"        # who gets auto-logged in
+desktop_autologin: true        # boot straight into the desktop (dev convenience)

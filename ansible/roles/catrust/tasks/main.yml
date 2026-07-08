@@ -1,0 +1,104 @@
+# Allow unsafe legacy renegotiation via openssl configuration
+# RedHat: on global level
+# Debian: in section [openssl_init]/[ssl_sect]/[system_default_sect]
+
+- name: Allow UnsafeLegacyRenegotiation to support corporate proxy
+  community.general.ini_file:
+    path: "{{ distro.openssl_config }}"
+    option: Options
+    value: UnsafeLegacyRenegotiation
+    state: present
+  become: true
+  when: is_redhat
+
+- name: Allow UnsafeLegacyRenegotiation to support corporate proxy [openssl_init]
+  community.general.ini_file:
+    path: "{{ distro.openssl_config }}"
+    section: openssl_init
+    option: ssl_conf
+    value: ssl_sect
+    state: present
+  become: true
+  when: is_debian
+
+- name: Allow UnsafeLegacyRenegotiation to support corporate proxy [ssl_sect]
+  community.general.ini_file:
+    path: "{{ distro.openssl_config }}"
+    section: ssl_sect
+    option: system_default
+    value: system_default_sect
+    state: present
+  become: true
+  when: is_debian
+
+- name: Allow UnsafeLegacyRenegotiation to support corporate proxy [system_default_sect]
+  community.general.ini_file:
+    path: "{{ distro.openssl_config }}"
+    section: system_default_sect
+    option: Options
+    # UnsafeLegacyRenegotiation for ubuntu <= 22.04
+    # UnsafeLegacyServerConnect for ubuntu >= 24.04
+    value: UnsafeLegacyRenegotiation,UnsafeLegacyServerConnect
+    state: present
+  become: true
+  when: is_debian
+
+- name: Creates ca_trust cache directory
+  ansible.builtin.file:
+    path: "{{ ca_trust_folder }}"
+    state: directory
+  become: true
+
+- name: Download ROOT CA Certificate
+  ansible.builtin.get_url:
+    url: "{{ root_ca_url }}"
+    dest: "{{ ca_temp_path }}"
+    validate_certs: false
+  become: true
+  register: get_url_result
+  when: root_ca_url is defined
+
+- name: Check for downloaded or Vagrant-injected certificate
+  ansible.builtin.stat:
+    path: "{{ ca_temp_path }}"
+  register: temp_cert
+  changed_when: false
+
+- name: Check type of downloaded or injected ROOT CA certificate
+  ansible.builtin.command: grep -q -- "-----BEGIN CERTIFICATE-----" "{{ ca_temp_path}}"
+  register: check_pem
+  failed_when: check_pem.rc != 0 and check_pem.rc != 1
+  check_mode: false
+  changed_when: false
+  when: temp_cert.stat.exists
+
+- name: Convert DER certificate to PEM
+  ansible.builtin.shell: |
+    openssl x509 -inform DER -in {{ ca_temp_path }} -out {{ ca_trust_pem_path }} -outform PEM
+    cp -f {{ ca_temp_path }} {{ ca_trust_der_path }}
+  become: true
+  when: temp_cert.stat.exists and check_pem.rc == 1
+
+- name: Convert PEM certificate to DER
+  ansible.builtin.shell: |
+    openssl x509 -inform PEM -in {{ ca_temp_path }} -out {{ ca_trust_der_path }} -outform DER
+    cp -f {{ ca_temp_path }} {{ ca_trust_pem_path }}
+  become: true
+  when: temp_cert.stat.exists and check_pem.rc == 0
+
+- name: "Persist cert's paths as facts"
+  ansible.builtin.set_fact:
+    ca_trust_der_path: "{{ ca_trust_der_path }}"
+    ca_trust_pem_path: "{{ ca_trust_pem_path }}"
+
+- name: Copy PEM certificate to system ca trust directory
+  ansible.builtin.copy:
+    src: "{{ ca_trust_pem_path }}"
+    dest: "{{ distro.system_ca_trust_dir }}/corporate_root_ca.crt"
+  become: true
+  register: copy_result
+
+- name: Update trusted ca certificates
+  command: "{{ distro.system_ca_trust_update }}"
+  when: copy_result.changed
+  become: true

@@ -1,0 +1,7 @@
+---
+distro:
+  installer: "dnf"
+  openssl_config: "/etc/crypto-policies/back-ends/opensslcnf.config"
+  system_ca_trust_dir: "/etc/pki/ca-trust/source/anchors"
+  system_ca_trust_update: "/usr/bin/update-ca-trust"
+  lib_dirname: "lib64"

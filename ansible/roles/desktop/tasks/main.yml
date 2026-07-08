@@ -1,0 +1,53 @@
+---
+# Install the desktop packages (family-specific), then configure autologin and
+# the graphical boot target (OS-agnostic). We do NOT start the display manager
+# here — it comes up on next boot (`vagrant reload`), avoiding disruption to the
+# provisioning SSH session.
+- name: Install desktop environment (family-specific)
+  ansible.builtin.include_tasks: "{{ ansible_os_family }}.yml"
+
+- name: Set the graphical target as default (boot into the desktop)
+  ansible.builtin.file:
+    src: /usr/lib/systemd/system/graphical.target
+    dest: /etc/systemd/system/default.target
+    state: link
+    force: true
+
+- name: Configure LightDM autologin
+  when: desktop_autologin | bool
+  block:
+    - name: Ensure LightDM drop-in dir exists
+      ansible.builtin.file:
+        path: /etc/lightdm/lightdm.conf.d
+        state: directory
+        mode: "0755"
+
+    - name: Write LightDM autologin config
+      ansible.builtin.copy:
+        dest: /etc/lightdm/lightdm.conf.d/50-devfleet-autologin.conf
+        mode: "0644"
+        content: |
+          [Seat:*]
+          autologin-user={{ desktop_user }}
+          autologin-user-timeout=0
+          autologin-session=xfce
+
+    # On Debian/Ubuntu, autologin requires membership of the `autologin` group.
+    - name: Ensure the autologin group exists (Debian family)
+      ansible.builtin.group:
+        name: autologin
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add the desktop user to the autologin group (Debian family)
+      ansible.builtin.user:
+        name: "{{ desktop_user }}"
+        groups: autologin
+        append: true
+      when: ansible_os_family == "Debian"
+
+- name: Enable the SPICE guest agent (libvirt clipboard / auto-resize)
+  ansible.builtin.systemd_service:
+    name: spice-vdagentd
+    enabled: true
+  ignore_errors: true  # package/service name varies; best-effort

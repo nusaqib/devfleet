@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: desktop
+  namespace: devfleet
+  author: devfleet
+  description: Lightweight XFCE desktop + autologin for a devfleet machine.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions: [all]
+    - name: Debian
+      versions: [all]
+    - name: EL
+      versions: [all]
+dependencies: []
