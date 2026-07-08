@@ -5,6 +5,8 @@
 - name: Install XFCE desktop + LightDM (Debian family)
   ansible.builtin.apt:
     name:
+      - xserver-xorg      # the X server itself (NOT pulled without recommends)
+      - xinit
       - xfce4
       - xfce4-goodies
       - lightdm
